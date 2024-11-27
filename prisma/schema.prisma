@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//this is a database for a team and match management
+
+model User {
+  id       Int    @id @default(autoincrement())
+  email    String @unique
+  password String @db.VarChar(255)
+
+  favoriteTeams Team[] @relation("FavoriteTeams")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("users")
+}
+
+model Team {
+  id    Int      @id @default(autoincrement())
+  name  String   @unique
+  coach String   @db.VarChar(255)
+  city  String   @db.VarChar(255)
+  found DateTime
+  image String?
+
+  userId Int
+  user   User @relation("FavoriteTeams", fields: [userId], references: [id])
+
+  players        Player[] @relation("PlayersOfTheTeam")
+  LocalMatches   Match[]  @relation("Local")
+  VisitorMatches Match[]  @relation("Visitor")
+
+  @@map("teams")
+}
+
+model Player {
+  id       Int     @id @default(autoincrement())
+  name     String
+  age      Int     @db.Integer
+  position String  @db.VarChar(255)
+  number   String  @db.VarChar(255)
+  image    String?
+
+  teamId Int
+  team   Team @relation("PlayersOfTheTeam", fields: [teamId], references: [id])
+
+  playerStats Stats[] @relation("StatsOfThePlayer")
+
+  @@map("players")
+}
+
+model Match {
+  id            Int      @id @default(autoincrement())
+  date          DateTime
+  location      String   @db.VarChar(255)
+  score_local   Int      @db.Integer
+  score_visitor Int      @db.Integer
+
+  localTeamId   Int
+  visitorTeamId Int
+
+  localTeam   Team @relation("Local", fields: [localTeamId], references: [id])
+  visitorTeam Team @relation("Visitor", fields: [visitorTeamId], references: [id])
+
+  matchStats Stats[] @relation("StatsOfTheMatch")
+
+  @@unique([localTeamId, visitorTeamId, date])
+  @@map("matches")
+}
+
+model Stats {
+  id         Int @id @default(autoincrement())
+  goal       Int @db.Integer
+  assist     Int @db.Integer
+  yellowCard Int @db.Integer
+  redCard    Int @db.Integer
+
+  playerId Int
+  matchId  Int
+
+  player Player @relation("StatsOfThePlayer", fields: [playerId], references: [id])
+  match  Match  @relation("StatsOfTheMatch", fields: [matchId], references: [id])
+
+  @@unique([playerId, matchId])
+  @@map("stats")
+}
